@@ -1,6 +1,6 @@
 'use strict';
 
-const STORAGE_KEY = 'contas-da-casa-v1';
+const STORAGE_KEY = 'contas-da-casa-v2';
 const MONTHS = [
   ['01', 'Janeiro'], ['02', 'Fevereiro'], ['03', 'Março'], ['04', 'Abril'],
   ['05', 'Maio'], ['06', 'Junho'], ['07', 'Julho'], ['08', 'Agosto'],
@@ -14,53 +14,13 @@ function localMonth() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
-function makeHistoricalRows(month, entries, snapshot = null, archived = false) {
-  return entries.map(([name, value, category], index) => ({
-    id: `hist-${month}-${snapshot || 'base'}-${index}`,
-    month,
-    name,
-    category,
-    value: Math.round(value * 100) / 100,
-    dueDate: '',
-    status: 'nao_informado',
-    notes: 'Importado da planilha original.',
-    createdAt: null,
-    source: 'importado',
-    snapshot,
-    archived
-  }));
-}
 function initialState() {
-  const expenses = [
-    ...makeHistoricalRows('2026-01', [
-      ['Financiamento', 918, 'Moradia'], ['Condomínio', 437.05, 'Moradia'], ['Internet', 100, 'Contas e serviços'],
-      ['Energia', 156.41, 'Contas e serviços'], ['Seguro', 225, 'Transporte'], ['IPVA', 0, 'Impostos e taxas'],
-      ['OAB - Rafael', 0, 'Profissional'], ['OAB - Naiara', 0, 'Profissional'], ['Cartão', 5576.11, 'Cartão']
-    ]),
-    ...makeHistoricalRows('2026-02', [
-      ['Financiamento', 918, 'Moradia'], ['Condomínio', 387, 'Moradia'], ['Internet', 100, 'Contas e serviços'],
-      ['Energia', 71.45, 'Contas e serviços'], ['Seguro', 225, 'Transporte']
-    ]),
-    ...makeHistoricalRows('2026-03', [
-      ['Financiamento', 918, 'Moradia'], ['Condomínio', 426.8, 'Moradia'], ['Internet', 100, 'Contas e serviços'],
-      ['Energia', 42.46, 'Contas e serviços'], ['Seguro', 225, 'Transporte']
-    ]),
-    ...makeHistoricalRows('2026-04', [
-      ['Financiamento', 928, 'Moradia'], ['Condomínio', 428.68, 'Moradia'], ['Internet', 100, 'Contas e serviços'],
-      ['Energia', 114.25, 'Contas e serviços'], ['Seguro', 260, 'Transporte']
-    ], 'abril_original', false),
-    ...makeHistoricalRows('2026-04', [
-      ['Financiamento', 928, 'Moradia'], ['Condomínio', 418, 'Moradia'], ['Internet', 100, 'Contas e serviços'],
-      ['OAB', 110, 'Profissional'], ['Energia', 140, 'Contas e serviços']
-    ], 'abril_2', true)
-  ];
   return {
-    version: 2,
+    version: 3,
     people: { one: 'Rafael', two: 'Naiara' },
-    expenses,
+    expenses: [],
     monthShares: {},
-    selectedMonth: localMonth(),
-    aprilVersion: 'abril_original'
+    selectedMonth: localMonth()
   };
 }
 function loadState() {
@@ -73,14 +33,13 @@ function loadState() {
     return {
       ...defaults,
       ...parsed,
-      version: 2,
+      version: 3,
       people: { ...defaults.people, ...parsed.people },
-      // Migra a versão anterior: remove percentuais por despesa e começa sem divisão mensal definida.
-      expenses: parsed.expenses.map(({ splitPercent, ...item }) => item),
+      expenses: parsed.expenses.map(({ splitPercent, archived, snapshot, source, ...item }) => item),
       monthShares: parsed.monthShares && typeof parsed.monthShares === 'object' ? parsed.monthShares : {}
     };
   } catch (error) {
-    console.warn('Não foi possível ler os dados salvos. Uma base inicial será carregada.', error);
+    console.warn('Não foi possível ler os dados salvos. Uma base vazia será criada.', error);
     return initialState();
   }
 }
@@ -126,11 +85,11 @@ function calculateMonthlyShares(total, onePercent) {
   const first = roundMoney(total * onePercent / 100);
   return { first, second: roundMoney(total - first) };
 }
-function currentMonthExpenses(includeArchived = false) {
-  return state.expenses.filter((item) => item.month === state.selectedMonth && (includeArchived || !item.archived));
+function currentMonthExpenses() {
+  return state.expenses.filter((item) => item.month === state.selectedMonth);
 }
 function activeYearExpenses(year) {
-  return state.expenses.filter((item) => item.month.startsWith(`${year}-`) && !item.archived);
+  return state.expenses.filter((item) => item.month.startsWith(`${year}-`));
 }
 function formatMonth(month) {
   const [year, number] = month.split('-');
@@ -216,8 +175,7 @@ function renderTable() {
     const statusLabel = item.status === 'pago' ? 'Pago' : item.status === 'pendente' ? 'Pendente' : 'Não informado';
     const statusClass = item.status === 'pago' ? 'status-pago' : item.status === 'pendente' ? 'status-pendente' : '';
     const due = item.dueDate ? `<span class="expense-note">Vence em ${formatDate(item.dueDate)}</span>` : '';
-    const importedNote = item.source === 'importado' ? '<span class="expense-note">Histórico importado</span>' : '';
-    const note = item.notes && item.source !== 'importado' ? `<span class="expense-note">${escapeHtml(item.notes)}</span>` : importedNote;
+    const note = item.notes ? `<span class="expense-note">${escapeHtml(item.notes)}</span>` : '';
     const statusCell = item.status === 'nao_informado' ? '<span class="category-pill">Não informado</span>' : `<span class="status-pill ${statusClass}">${statusLabel}</span>`;
     return `<tr>
       <td><span class="expense-name">${escapeHtml(item.name)}</span>${due || note}</td>
@@ -244,17 +202,6 @@ function renderAnnual() {
     return `<button type="button" class="month-tile ${monthKey === state.selectedMonth ? 'active' : ''}" data-month="${monthKey}"><span>${label}</span><strong>${money.format(total)}</strong><small>${monthRows.length} ${monthRows.length === 1 ? 'despesa' : 'despesas'}</small></button>`;
   }).join('');
 }
-function renderAprilVersionNotice() {
-  const show = state.selectedMonth === '2026-04' && state.expenses.some((item) => item.snapshot === 'abril_2');
-  $('aprilVersionNotice').hidden = !show;
-  if (!show) return;
-  const activeVersion = state.aprilVersion || 'abril_original';
-  $('aprilVersionText').textContent = activeVersion === 'abril_original'
-    ? 'A versão original está ativa. A aba Abril (2) foi guardada para evitar duplicidade.'
-    : 'A versão Abril (2) está ativa. Os valores da aba Abril original estão guardados.';
-  $('aprilOriginalButton').disabled = activeVersion === 'abril_original';
-  $('aprilAltButton').disabled = activeVersion === 'abril_2';
-}
 function renderAll() {
   dom.monthPicker.value = state.selectedMonth;
   updatePeopleLabels();
@@ -262,7 +209,6 @@ function renderAll() {
   updateCategoryBreakdown();
   renderTable();
   renderAnnual();
-  renderAprilVersionNotice();
   updateMonthlySplitPreview();
 }
 function updateMonthlySplitPreview() {
@@ -293,14 +239,13 @@ function resetForm() {
 function editExpense(id) {
   const item = state.expenses.find((expense) => expense.id === id);
   if (!item) return;
-  if (item.archived) { showToast('Ative esta versão de abril antes de editar.'); return; }
   dom.editingId.value = item.id;
   dom.expenseName.value = item.name;
   dom.expenseCategory.value = item.category;
   dom.expenseValue.value = item.value.toFixed(2);
   dom.expenseDueDate.value = item.dueDate || '';
   dom.expenseStatus.value = item.status === 'pago' ? 'pago' : 'pendente';
-  dom.expenseNotes.value = item.notes && item.source !== 'importado' ? item.notes : '';
+  dom.expenseNotes.value = item.notes || '';
   $('formTitle').textContent = 'Editar despesa';
   dom.saveExpenseButton.textContent = 'Salvar alterações';
   dom.cancelEditButton.hidden = false;
@@ -315,15 +260,6 @@ function changeMonth(month) {
   dom.filterStatus.value = '';
   resetForm();
   renderAll();
-}
-function setAprilVersion(version) {
-  if (!['abril_original', 'abril_2'].includes(version)) return;
-  state.aprilVersion = version;
-  state.expenses.forEach((item) => {
-    if (item.month === '2026-04' && item.snapshot) item.archived = item.snapshot !== version;
-  });
-  saveState(); renderAll();
-  showToast(version === 'abril_original' ? 'Versão original de abril ativada.' : 'Versão Abril (2) ativada.');
 }
 function downloadFile(filename, content, type) {
   const blob = new Blob([content], { type });
@@ -367,9 +303,9 @@ function restoreBackup(file) {
       if (!confirm('Restaurar este backup substituirá os dados atuais neste navegador. Deseja continuar?')) return;
       state = {
         ...initialState(), ...parsed,
-        version: 2,
+        version: 3,
         people: { ...initialState().people, ...parsed.people },
-        expenses: parsed.expenses.map(({ splitPercent, ...item }) => item),
+        expenses: parsed.expenses.map(({ splitPercent, archived, snapshot, source, ...item }) => item),
         monthShares: parsed.monthShares && typeof parsed.monthShares === 'object' ? parsed.monthShares : {}
       };
       saveState(); resetForm(); renderAll(); showToast('Backup restaurado com sucesso.');
@@ -391,7 +327,7 @@ dom.expenseForm.addEventListener('submit', (event) => {
   const payload = {
     name, category: dom.expenseCategory.value, value,
     month: state.selectedMonth, dueDate: dom.expenseDueDate.value, status: dom.expenseStatus.value,
-    notes: dom.expenseNotes.value.trim(), source: 'manual', archived: false, snapshot: null
+    notes: dom.expenseNotes.value.trim()
   };
   const editingId = dom.editingId.value;
   if (editingId) {
@@ -456,8 +392,6 @@ $('monthsGrid').addEventListener('click', (event) => {
   const button = event.target.closest('button[data-month]');
   if (button) changeMonth(button.dataset.month);
 });
-$('aprilOriginalButton').addEventListener('click', () => setAprilVersion('abril_original'));
-$('aprilAltButton').addEventListener('click', () => setAprilVersion('abril_2'));
 $('settingsButton').addEventListener('click', () => { updatePeopleLabels(); dom.settingsDialog.showModal(); });
 $('saveSettingsButton').addEventListener('click', (event) => {
   event.preventDefault();
@@ -471,7 +405,7 @@ $('restoreButton').addEventListener('click', () => dom.restoreFile.click());
 dom.restoreFile.addEventListener('change', () => { if (dom.restoreFile.files[0]) restoreBackup(dom.restoreFile.files[0]); });
 $('exportCsvButton').addEventListener('click', exportMonthCsv);
 
-// Inicialização: a base histórica é carregada apenas na primeira utilização.
+// Inicialização: o sistema começa vazio na primeira abertura desta versão.
 if (!localStorage.getItem(STORAGE_KEY)) saveState();
 const categoryOptions = CATEGORIES.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join('');
 dom.filterCategory.insertAdjacentHTML('beforeend', categoryOptions);
