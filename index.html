@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#172554">
+  <meta name="description" content="Controle as contas da casa e defina a divisão no fechamento mensal.">
+  <title>Contas da Casa</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#inicio" aria-label="Contas da Casa - início">
+        <span class="brand-mark" aria-hidden="true">⌂</span>
+        <span><strong>contas<span class="brand-light">da casa</span></strong><small>organização sem complicação</small></span>
+      </a>
+      <div class="top-actions">
+        <button class="button button-ghost" id="settingsButton" type="button"><span aria-hidden="true">⚙</span> Pessoas</button>
+        <button class="button button-ghost" id="backupButton" type="button"><span aria-hidden="true">↓</span> Backup</button>
+        <button class="button button-ghost" id="restoreButton" type="button"><span aria-hidden="true">↑</span> Restaurar</button>
+        <input id="restoreFile" type="file" accept="application/json,.json" hidden>
+      </div>
+    </header>
+
+    <main id="inicio">
+      <section class="intro-row">
+        <div>
+          <p class="eyebrow">CONTROLE FINANCEIRO COMPARTILHADO</p>
+          <h1>As contas da casa,<br><span>do jeito de vocês.</span></h1>
+          <p class="intro-copy">Registrem todas as despesas ao longo do mês. No fechamento, escolham a porcentagem que cada pessoa vai assumir sobre o total.</p>
+        </div>
+        <div class="month-control">
+          <label for="monthPicker">Mês de referência</label>
+          <div class="month-picker-wrap">
+            <button class="icon-button" id="previousMonth" type="button" aria-label="Mês anterior">‹</button>
+            <input id="monthPicker" type="month">
+            <button class="icon-button" id="nextMonth" type="button" aria-label="Próximo mês">›</button>
+          </div>
+          <span class="month-hint" id="monthHint">Seus dados ficam salvos neste navegador.</span>
+        </div>
+      </section>
+
+      <section class="summary-grid" aria-label="Resumo do mês">
+        <article class="summary-card summary-total">
+          <div class="summary-top"><span>Total das despesas</span><span class="summary-icon">▤</span></div>
+          <strong id="totalMonth">R$ 0,00</strong>
+          <small id="expenseCount">0 lançamentos no mês</small>
+        </article>
+        <article class="summary-card">
+          <div class="summary-top"><span id="personOneLabel">Rafael paga</span><span class="person-dot dot-one"></span></div>
+          <strong id="personOneTotal">R$ 0,00</strong>
+          <small id="personOnePercent">0% do total</small>
+        </article>
+        <article class="summary-card">
+          <div class="summary-top"><span id="personTwoLabel">Outra pessoa paga</span><span class="person-dot dot-two"></span></div>
+          <strong id="personTwoTotal">R$ 0,00</strong>
+          <small id="personTwoPercent">0% do total</small>
+        </article>
+        <article class="summary-card summary-pending">
+          <div class="summary-top"><span>Em aberto</span><span class="summary-icon">◷</span></div>
+          <strong id="pendingTotal">R$ 0,00</strong>
+          <small id="pendingCount">0 contas pendentes</small>
+        </article>
+      </section>
+
+      <section class="split-section panel">
+        <div class="section-heading compact-heading">
+          <div><p class="eyebrow">FECHAMENTO DO MÊS</p><h2>Definam a divisão depois de somar tudo</h2></div>
+          <div class="split-heading-meta"><span class="muted-label" id="splitTotalLabel">Total lançado: R$ 0,00</span><span class="split-status" id="splitStatus">Divisão ainda não definida</span></div>
+        </div>
+        <div class="split-bar" role="img" aria-label="Distribuição do total mensal entre as duas pessoas">
+          <div class="split-bar-one" id="splitBarOne"></div>
+          <div class="split-bar-two" id="splitBarTwo"></div>
+        </div>
+        <div class="split-legend">
+          <span><i class="legend-dot dot-one"></i><b id="splitOneName">Rafael</b><span id="splitOneShare">A definir</span></span>
+          <span><i class="legend-dot dot-two"></i><b id="splitTwoName">Naiara</b><span id="splitTwoShare">A definir</span></span>
+          <span class="split-note">A porcentagem vale para o total do mês, não para cada conta.</span>
+        </div>
+        <div class="monthly-split-editor">
+          <div class="split-instructions"><strong>Como fazer o fechamento?</strong><p>1. Cadastrem todas as contas do mês. 2. Confiram o total acumulado. 3. Combinem quanto cada pessoa vai pagar e informem apenas o percentual da primeira pessoa. O restante será calculado automaticamente.</p></div>
+          <form id="monthlySplitForm" class="monthly-split-form">
+            <div class="field">
+              <label for="monthPercent" id="monthlyPercentLabel">Qual percentual ficará com Rafael?</label>
+              <div class="percent-input-wrap"><input id="monthPercent" type="number" min="0" max="100" step="0.01" inputmode="decimal" placeholder="Ex.: 70"><span>%</span></div>
+              <div class="monthly-split-preview" id="monthlySplitPreview" aria-live="polite">Adicione as despesas do mês para simular a divisão.</div>
+            </div>
+            <div class="split-actions"><button class="button button-primary" id="saveMonthlySplitButton" type="submit">Salvar divisão do mês</button><button class="button button-subtle" id="clearMonthlySplitButton" type="button" hidden>Limpar divisão</button></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <section class="panel form-panel" id="expenseFormPanel">
+          <div class="section-heading">
+            <div><p class="eyebrow">NOVO LANÇAMENTO</p><h2 id="formTitle">Adicionar despesa</h2></div>
+            <span class="form-badge">＋</span>
+          </div>
+          <form id="expenseForm">
+            <input id="editingId" type="hidden">
+            <div class="field-grid">
+              <div class="field field-wide">
+                <label for="expenseName">Nome da conta ou despesa *</label>
+                <input id="expenseName" type="text" maxlength="80" placeholder="Ex.: Condomínio, energia, mercado..." required>
+              </div>
+              <div class="field">
+                <label for="expenseCategory">Categoria</label>
+                <select id="expenseCategory">
+                  <option value="Moradia">Moradia</option>
+                  <option value="Contas e serviços">Contas e serviços</option>
+                  <option value="Alimentação">Alimentação</option>
+                  <option value="Transporte">Transporte</option>
+                  <option value="Saúde">Saúde</option>
+                  <option value="Lazer">Lazer</option>
+                  <option value="Cartão">Cartão</option>
+                  <option value="Profissional">Profissional</option>
+                  <option value="Impostos e taxas">Impostos e taxas</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="expenseValue">Valor total (R$) *</label>
+                <input id="expenseValue" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00" required>
+              </div>
+              <div class="field">
+                <label for="expenseDueDate">Vencimento</label>
+                <input id="expenseDueDate" type="date">
+              </div>
+              <div class="field">
+                <label for="expenseStatus">Situação</label>
+                <select id="expenseStatus">
+                  <option value="pendente">Pendente</option>
+                  <option value="pago">Pago</option>
+                </select>
+              </div>
+              <div class="field field-wide">
+                <label for="expenseNotes">Observações <span class="optional">(opcional)</span></label>
+                <textarea id="expenseNotes" rows="2" maxlength="300" placeholder="Ex.: pago no cartão, rateio combinado, referência... "></textarea>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="button button-primary" id="saveExpenseButton" type="submit">Adicionar despesa</button>
+              <button class="button button-subtle" id="cancelEditButton" type="button" hidden>Cancelar edição</button>
+            </div>
+          </form>
+          <div class="form-footnote"><span class="info-icon">i</span> Cadastre apenas o valor total de cada despesa. A divisão entre vocês será definida uma única vez, no fechamento do mês.</div>
+        </section>
+
+        <section class="panel overview-panel">
+          <div class="section-heading">
+            <div><p class="eyebrow">VISÃO GERAL</p><h2>Onde está o dinheiro?</h2></div>
+          </div>
+          <div id="categoryBreakdown" class="category-breakdown">
+            <div class="empty-small">Adicione despesas para visualizar os gastos por categoria.</div>
+          </div>
+          <div class="overview-divider"></div>
+          <div class="overview-bottom">
+            <div><span class="overview-label">Maior despesa</span><strong id="largestExpense">—</strong><small id="largestExpenseValue">Nenhum lançamento</small></div>
+            <div class="overview-icon">⌁</div>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel expenses-panel">
+        <div class="section-heading list-heading">
+          <div><p class="eyebrow">ACOMPANHAMENTO</p><h2>Despesas do mês</h2><p class="section-subtitle" id="listSubtitle">Veja, edite e acompanhe seus lançamentos.</p></div>
+          <button class="button button-outline" id="exportCsvButton" type="button"><span aria-hidden="true">↓</span> Exportar mês (CSV)</button>
+        </div>
+        <div class="filters-row">
+          <div class="search-field"><span aria-hidden="true">⌕</span><input id="searchExpenses" type="search" placeholder="Buscar despesa..."></div>
+          <select id="filterCategory" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option></select>
+          <select id="filterStatus" aria-label="Filtrar por situação"><option value="">Todas as situações</option><option value="pendente">Pendentes</option><option value="pago">Pagas</option></select>
+        </div>
+        <div id="aprilVersionNotice" class="notice notice-info" hidden>
+          <div><strong>Há duas versões de abril na planilha original.</strong><span id="aprilVersionText">A versão original está ativa. A outra foi guardada para evitar duplicidade.</span></div>
+          <div class="notice-actions"><button class="text-button" id="aprilOriginalButton" type="button">Abril original</button><button class="text-button" id="aprilAltButton" type="button">Abril (2)</button></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>DESPESA</th><th>CATEGORIA</th><th>VALOR</th><th>SITUAÇÃO</th><th class="actions-head">AÇÕES</th></tr></thead>
+            <tbody id="expenseTableBody"></tbody>
+          </table>
+          <div id="emptyState" class="empty-state" hidden>
+            <div class="empty-illustration">▤</div><strong>Nenhuma despesa por aqui</strong><span>Adicione a primeira conta do mês usando o formulário ao lado.</span>
+          </div>
+        </div>
+        <div class="table-footer"><span id="tableCount">0 despesas</span><strong id="tableTotal">Total: R$ 0,00</strong></div>
+      </section>
+
+      <section class="panel annual-panel">
+        <div class="section-heading annual-heading">
+          <div><p class="eyebrow">ACOMPANHAMENTO ANUAL</p><h2>Resumo de 2026</h2><p class="section-subtitle">Selecione um mês para consultar ou lançar despesas.</p></div>
+          <div class="annual-total"><span>Total registrado no ano</span><strong id="annualTotal">R$ 0,00</strong></div>
+        </div>
+        <div class="months-grid" id="monthsGrid"></div>
+      </section>
+
+      <footer class="app-footer"><span>Contas da Casa <b>•</b> Seus dados ficam no seu navegador.</span><span>Faça backups periódicos para não perder seus registros.</span></footer>
+    </main>
+  </div>
+
+  <dialog id="settingsDialog" class="settings-dialog">
+    <form method="dialog" id="settingsForm">
+      <div class="dialog-heading"><div><p class="eyebrow">PERSONALIZAÇÃO</p><h2>Quem divide as contas?</h2></div><button class="icon-button close-dialog" aria-label="Fechar" value="cancel">×</button></div>
+      <p class="dialog-copy">Escolha os nomes que aparecerão nos resumos e nas despesas. Isso não altera os valores já lançados.</p>
+      <div class="field"><label for="personOneInput">Pessoa 1</label><input id="personOneInput" type="text" maxlength="30" required></div>
+      <div class="field"><label for="personTwoInput">Pessoa 2</label><input id="personTwoInput" type="text" maxlength="30" required></div>
+      <div class="dialog-actions"><button class="button button-subtle close-dialog" value="cancel">Cancelar</button><button class="button button-primary" id="saveSettingsButton" value="save">Salvar nomes</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>
