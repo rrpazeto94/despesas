@@ -23,7 +23,7 @@ Os dados de versões anteriores não são carregados automaticamente: esta vers�
 - No fechamento, confira o **Total lançado** e combine quanto cada pessoa vai assumir.
 - Informe somente o percentual da Pessoa 1. O percentual e o valor da Pessoa 2 são calculados automaticamente sobre o total de todas as despesas do mês.
 - A divisão é independente por mês. É possível alterar ou limpar a divisão quando necessário; os valores são recalculados automaticamente se uma despesa for adicionada, editada ou excluída.
-- Os nomes das duas pessoas podem ser alterados no botão **Pessoas**.
+- Os nomes iniciais são **Rafael** e **Marbia**. Eles podem ser alterados no botão **Pessoas**.
 - É possível marcar as contas como pagas/pendentes, editar e excluir lançamentos, filtrar por categoria e buscar pelo nome.
 - **Exportar mês (CSV)** inclui as despesas e, quando definida, a divisão total do mês.
 

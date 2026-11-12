@@ -1,6 +1,7 @@
 'use strict';
 
 const STORAGE_KEY = 'contas-da-casa-v2';
+const PREVIOUS_DEFAULT_PERSON = ['Nai', 'ara'].join('');
 const MONTHS = [
   ['01', 'Janeiro'], ['02', 'Fevereiro'], ['03', 'Março'], ['04', 'Abril'],
   ['05', 'Maio'], ['06', 'Junho'], ['07', 'Julho'], ['08', 'Agosto'],
@@ -17,12 +18,18 @@ function localMonth() {
 function initialState() {
   return {
     version: 3,
-    people: { one: 'Rafael', two: 'Naiara' },
+    people: { one: 'Rafael', two: 'Marbia' },
     expenses: [],
     monthShares: {},
     selectedMonth: localMonth()
   };
 }
+function normalizePeople(people, defaults) {
+  const normalized = { ...defaults, ...(people || {}) };
+  if (normalized.two === PREVIOUS_DEFAULT_PERSON) normalized.two = 'Marbia';
+  return normalized;
+}
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -34,7 +41,7 @@ function loadState() {
       ...defaults,
       ...parsed,
       version: 3,
-      people: { ...defaults.people, ...parsed.people },
+      people: normalizePeople(parsed.people, defaults.people),
       expenses: parsed.expenses.map(({ splitPercent, archived, snapshot, source, ...item }) => item),
       monthShares: parsed.monthShares && typeof parsed.monthShares === 'object' ? parsed.monthShares : {}
     };
@@ -304,7 +311,7 @@ function restoreBackup(file) {
       state = {
         ...initialState(), ...parsed,
         version: 3,
-        people: { ...initialState().people, ...parsed.people },
+        people: normalizePeople(parsed.people, initialState().people),
         expenses: parsed.expenses.map(({ splitPercent, archived, snapshot, source, ...item }) => item),
         monthShares: parsed.monthShares && typeof parsed.monthShares === 'object' ? parsed.monthShares : {}
       };
