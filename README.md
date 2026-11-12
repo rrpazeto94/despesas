@@ -34,3 +34,13 @@ Os dados de versões anteriores não são carregados automaticamente: esta vers�
 - Use **Restaurar** para carregar um backup anterior. A restauração substitui a base atual do navegador.
 - O armazenamento é específico do navegador e do perfil do computador em que a aplicação foi aberta. Limpar os dados do navegador pode apagar os lançamentos; mantenha backups periódicos.
 - Para usar os mesmos dados em mais de um aparelho, será necessário conectar a aplicação a um banco de dados e autenticação; o GitHub Pages sozinho publica apenas os arquivos do site.
+
+
+## Tela de login demonstrativa
+
+Esta versão possui uma tela simples de acesso, sem autenticação em servidor.
+
+- Usuário: `familia`
+- Senha: `Casa@2026`
+
+A sessão fica ativa na aba atual até clicar em **Sair** ou fechar a aba. Como as credenciais estão no código-fonte do site, esse bloqueio é apenas visual/demonstrativo e não protege dados contra alguém que inspecione o código ou o armazenamento do navegador. Para segurança real, será necessário implementar autenticação no servidor (por exemplo, Supabase Auth).

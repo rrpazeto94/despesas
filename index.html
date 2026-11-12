@@ -9,7 +9,29 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="app-shell">
+  <section class="login-screen" id="loginScreen" aria-label="Acesso ao Contas da Casa">
+    <div class="login-card">
+      <div class="login-brand-mark" aria-hidden="true">⌂</div>
+      <p class="eyebrow">ORGANIZAÇÃO SEM COMPLICAÇÃO</p>
+      <h1>Contas <span>da Casa</span></h1>
+      <p class="login-description">Entre para acompanhar e organizar as despesas de vocês.</p>
+      <form id="loginForm" class="login-form">
+        <div class="field">
+          <label for="loginUser">Usuário</label>
+          <input id="loginUser" name="username" type="text" placeholder="Digite seu usuário" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="loginPassword">Senha</label>
+          <input id="loginPassword" name="password" type="password" placeholder="Digite sua senha" autocomplete="current-password" required>
+        </div>
+        <p class="login-error" id="loginError" role="alert" hidden>Usuário ou senha incorretos. Tente novamente.</p>
+        <button class="button button-primary login-submit" type="submit">Entrar no sistema</button>
+      </form>
+      <p class="login-footnote">Acesso de uso doméstico</p>
+    </div>
+  </section>
+
+  <div class="app-shell" id="appShell" hidden>
     <header class="topbar">
       <a class="brand" href="#inicio" aria-label="Contas da Casa - início">
         <span class="brand-mark" aria-hidden="true">⌂</span>
@@ -19,6 +41,7 @@
         <button class="button button-ghost" id="settingsButton" type="button"><span aria-hidden="true">⚙</span> Pessoas</button>
         <button class="button button-ghost" id="backupButton" type="button"><span aria-hidden="true">↓</span> Backup</button>
         <button class="button button-ghost" id="restoreButton" type="button"><span aria-hidden="true">↑</span> Restaurar</button>
+        <button class="button button-ghost" id="logoutButton" type="button">Sair</button>
         <input id="restoreFile" type="file" accept="application/json,.json" hidden>
       </div>
     </header>
@@ -207,6 +230,45 @@
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>
+    // Acesso demonstrativo: credenciais ficam no próprio navegador e não oferecem segurança real.
+    const LOGIN_USER = 'familia';
+    const LOGIN_PASSWORD = 'Casa@2026';
+    const loginScreen = document.getElementById('loginScreen');
+    const appShell = document.getElementById('appShell');
+    const loginForm = document.getElementById('loginForm');
+    const loginError = document.getElementById('loginError');
+
+    function showApp() {
+      loginScreen.hidden = true;
+      appShell.hidden = false;
+    }
+
+    if (sessionStorage.getItem('contas-da-casa-auth') === 'ok') showApp();
+
+    loginForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const username = document.getElementById('loginUser').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      if (username === LOGIN_USER && password === LOGIN_PASSWORD) {
+        sessionStorage.setItem('contas-da-casa-auth', 'ok');
+        loginError.hidden = true;
+        showApp();
+      } else {
+        loginError.hidden = false;
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginPassword').focus();
+      }
+    });
+
+    document.getElementById('logoutButton').addEventListener('click', () => {
+      sessionStorage.removeItem('contas-da-casa-auth');
+      appShell.hidden = true;
+      loginForm.reset();
+      loginError.hidden = true;
+      loginScreen.hidden = false;
+    });
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
